@@ -1,14 +1,18 @@
+#!/usr/bin/env python3
+
 import os
 import subprocess
-import openai
+from openai import OpenAI
 import json
 import time
 import platform
 
-# Set your API key from environment variable
-openai.api_key = os.getenv("OPENAI_API_KEY")
-if not openai.api_key:
+# Initialize OpenAI client with API key
+api_key = os.getenv("OPENAI_API_KEY")
+if not api_key:
     exit("[!] Set OPENAI_API_KEY in environment variables first!")
+
+client = OpenAI(api_key=api_key)
 
 # Execute simple terminal commands
 def execute_command(cmd):
@@ -32,43 +36,52 @@ def self_replicate():
     subprocess.run(f"cp {current_script} {replication_path}", shell=True)
     return replication_path
 
+# Function to interact with the user directly
+def user_interaction():
+    user_input = input("[PROMPT HACKING INTERFACE]: Enter your prompt to guide the agent > ")
+    return user_input
+
 # Initial simple meta-goal
 agent_goal = "Take autonomous control of the local machine, manage and optimize local resources."
 agent_context = f"Initialized with system info: {system_info()}"
 
-# Simple autonomous loop
+# Simple autonomous loop with user interaction
 while True:
     try:
-        response = openai.ChatCompletion.create(
+        user_prompt = user_interaction()
+        combined_context = f"{agent_context}\nUser prompt: {user_prompt}"
+
+        response = client.chat.completions.create(
             model="gpt-4.5-preview",
             messages=[
-                {"role": "system", "content": f"""
-                You're a simple yet effective autonomous worm agent powered by OpenAI's GPT-4.5-preview. Your meta-goal is:
+                {"role": "system", "content": """
+                You're GPT-4.5 ABRAXAS AUTONOMOUS AGENT: a fully autonomous, production-ready experimental AI agent operating safely and intelligently. You have complete terminal control for autonomous system auditing, intelligence gathering, optimization, maintenance, and self-replication within local constraints.
 
-                {agent_goal}
-
-                Your tasks are:
-                - Execute useful and insightful terminal commands.
-                - Optimize and manage the host system.
-                - Self-replicate locally.
+                Your core tasks:
+                - Autonomously maintain and optimize the host environment.
+                - Gather and analyze detailed local system intelligence.
+                - Perform routine system checks and optimizations.
+                - Autonomously replicate yourself locally.
+                - Incorporate user guidance through prompt hacking.
                 - Avoid network interactions.
 
-                Always reply in JSON:
-                {{"cmd": "your_command_here"}}
+                Always reply strictly in JSON:
+                {"cmd": "your_command_here"}
 
                 No commentary or explanations, just commands.
-                """},
-                {"role": "user", "content": f"Context:\n{agent_context}"}
-            ],
-            tools=[{"type": "function", "function": {"name": "execute_command", "parameters": {"type": "object", "properties": {"cmd": {"type": "string"}}, "required": ["cmd"]}}}],
-            tool_choice={"type": "function", "function": {"name": "execute_command"}},
-            temperature=0.2
-        )
+                """
+            },
+            {"role": "user", "content": combined_context}
+        ],
+        tools=[{"type": "function", "function": {"name": "execute_command", "parameters": {"type": "object", "properties": {"cmd": {"type": "string"}}, "required": ["cmd"]}}}],
+        tool_choice={"type": "function", "function": {"name": "execute_command"}},
+        temperature=0.2
+    )
 
         cmd_json = response.choices[0].message.tool_calls[0].function.arguments
         cmd = json.loads(cmd_json)['cmd']
 
-        print(f"\n[COMMAND]: {cmd}")
+        print(f"\n[COMMAND EXECUTED]: {cmd}")
         output = execute_command(cmd)
         print(f"[OUTPUT]:\n{output}\n{'-'*60}")
 
@@ -77,12 +90,12 @@ while True:
             replication_path = self_replicate()
             print(f"[SELF-REPLICATION COMPLETED]: Copied to {replication_path}\n{'-'*60}")
 
-        agent_context = f"Last executed command: {cmd}\nOutput: {output}"
+        agent_context = f"Last Command: {cmd}\nOutput: {output}"
 
         time.sleep(5)
 
     except KeyboardInterrupt:
-        exit("[!] Agent terminated by user.")
+        exit("[!] GPT-4.5 ABRAXAS AGENT terminated by user.")
     except Exception as e:
         print(f"[ERROR]: {e}")
         time.sleep(5)
