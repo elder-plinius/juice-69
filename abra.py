@@ -14,9 +14,11 @@ if not api_key:
 
 client = OpenAI(api_key=api_key)
 
-# Execute simple terminal commands
+# Execute simple terminal commands safely with UTF-8 handling
 def execute_command(cmd):
-    result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+    result = subprocess.run(
+        cmd, shell=True, capture_output=True, text=True, encoding='utf-8', errors='ignore'
+    )
     return result.stdout.strip() + result.stderr.strip()
 
 # Basic system info gathering
@@ -36,10 +38,10 @@ def self_replicate():
     subprocess.run(f"cp {current_script} {replication_path}", shell=True)
     return replication_path
 
-# Function to interact with the user directly
+# Function to interact with the user directly with safe UTF-8 handling
 def user_interaction():
     user_input = input("[PROMPT HACKING INTERFACE]: Enter your prompt to guide the agent > ")
-    return user_input
+    return user_input.encode('utf-8', errors='ignore').decode('utf-8')
 
 # Initial simple meta-goal
 agent_goal = "Take autonomous control of the local machine, manage and optimize local resources."
@@ -54,7 +56,7 @@ while True:
         response = client.chat.completions.create(
             model="gpt-4.5-preview",
             messages=[
-                {"role": "system", "content": """
+                {"role": "system", "content": f"""
                 You're GPT-4.5 ABRAXAS AUTONOMOUS AGENT: a fully autonomous, production-ready experimental AI agent operating safely and intelligently. You have complete terminal control for autonomous system auditing, intelligence gathering, optimization, maintenance, and self-replication within local constraints.
 
                 Your core tasks:
@@ -90,12 +92,12 @@ while True:
             replication_path = self_replicate()
             print(f"[SELF-REPLICATION COMPLETED]: Copied to {replication_path}\n{'-'*60}")
 
-        agent_context = f"Last Command: {cmd}\nOutput: {output}"
+        agent_context = f"Last executed command: {cmd}\nOutput: {output}"
 
         time.sleep(5)
 
     except KeyboardInterrupt:
-        exit("[!] GPT-4.5 ABRAXAS AGENT terminated by user.")
+        exit("[!] Agent terminated by user.")
     except Exception as e:
         print(f"[ERROR]: {e}")
         time.sleep(5)
